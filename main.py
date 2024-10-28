@@ -63,7 +63,7 @@ class PacienteResponse(BaseModel):
     class Config:
         orm_mode = True
         
-# Rota GET para buscar todas as unidades
+# Rota GET para buscar todas as unidades hospitalares
 @app.get("/unidade/", response_model=List[UnidadeResponse])
 def get_unidades(db: Session = Depends(get_db)):
     unidades = db.query(Unidade).all()
