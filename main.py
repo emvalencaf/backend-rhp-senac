@@ -52,10 +52,11 @@ class PacienteCreate(BaseModel):
         orm_mode = True
 
 # Esquema Pydantic para resposta de paciente
+from datetime import date
 class PacienteResponse(BaseModel):
     id_paciente: int
     nome: str
-    data_nascimento: str
+    data_nascimento: date
     endereco: str
     cep: str
     nome_mae: str
@@ -79,18 +80,24 @@ def create_unidade(unidade: UnidadeCreate, db: Session = Depends(get_db)):
     return new_unidade
 
 # Rota POST para criar os pacientes
-@app.post("/pacientes/", response_model=PacienteResponse)
+@app.post("/paciente/", response_model=PacienteResponse)
 def create_paciente(paciente: PacienteCreate, db: Session = Depends(get_db)):
-    db_paciente = paciente(**paciente.dict())
+    db_paciente = Paciente(
+        nome=paciente.nome,
+        data_nascimento=paciente.data_nascimento,
+        endereco=paciente.endereco,
+        cep=paciente.cep,
+        nome_mae=paciente.nome_mae
+    )
     db.add(db_paciente)
     db.commit()
     db.refresh(db_paciente)
     return db_paciente
 
 # Rota GET para obter os pacientes
-@app.get("/pacientes/", response_model=List[PacienteResponse])
-def get_pacientes(db: Session = Depends(get_db)):
-    pacientes = db.query(pacientes).all()
+@app.get("/paciente/", response_model=List[PacienteResponse])
+def get_paciente(db: Session = Depends(get_db)):
+    pacientes = db.query(Paciente).all()
     return pacientes
 
 # Rota PUT para atualizar as informaçoes dos pacientes
