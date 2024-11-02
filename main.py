@@ -103,6 +103,17 @@ class AtendimentoCreate(BaseModel):
 class AtendimentoResponse(AtendimentoCreate):
     id_atendimento: int
 
+# Rota Teste da API
+@app.get("/", summary="Verificação de Status da API")
+def root():
+    return {
+        "message": "API está funcionando!",
+        "status": "operacional",
+        "versao": "1.0.0",
+        "timestamp": datetime.now().isoformat()
+    }
+
+
 # Rotas CRUD para Unidade Hospitalar
 @app.post("/unidade/", response_model=UnidadeHospitalarResponse)
 def create_unidade(unidade: UnidadeHospitalarCreate, db: Session = Depends(get_db)):
