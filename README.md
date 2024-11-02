@@ -236,7 +236,3 @@ Aqui estão exemplos de dados em JSON que podem ser usados para teste da API.
 - **Leito**: Representa um leito hospitalar com tipo e status de ocupação.
 - **Profissional**: Representa um profissional de saúde com nome, setor e função.
 - **Atendimento**: Representa um atendimento hospitalar com data/hora, tipo, origem, convênio, e referências a paciente e profissional.
-
-## Observações
-
-Para testar, utilize uma ferramenta como o Postman ou o Swagger UI gerado automaticamente em `http://127.0.0.1:8000/docs`.
