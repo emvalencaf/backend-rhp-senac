@@ -2,6 +2,7 @@
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import relationship
 from database import Base  # Importa a Base do database.py
+from datetime import datetime
 
 # Modelo para a tabela Unidade
 class Unidade(Base):

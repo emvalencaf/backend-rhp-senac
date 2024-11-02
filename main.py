@@ -1,24 +1,59 @@
-# main.py
-from fastapi import FastAPI, Depends, HTTPException
-from sqlalchemy.orm import Session
+from datetime import datetime
 from typing import List
-from models.models import Unidade, Paciente, Leito # Importa os models
-from database import SessionLocal, engine, Base  # Importa a sessão e a engine do database.py
+from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List
+from sqlalchemy import create_engine, Column, Integer, String, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
 
-# Cria o aplicativo FastAPI
 app = FastAPI()
 
-#====== Rota Publica apenas para testar no Postman se esta tudo funcionando======
-@app.get("/")
-def root():
-    return {"message": "API esta funcionando!"}
+# Configuração do banco de dados
+DATABASE_URL = "sqlite:///./hospital.db"
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
-# Cria as tabelas no banco de dados
+# Modelos do banco de dados
+class UnidadeHospitalar(Base):
+    __tablename__ = "unidades_hospitalares"
+    id_unidade = Column(Integer, primary_key=True, index=True)
+    nome = Column(String, index=True)
+    localizacao = Column(String)
+
+class Paciente(Base):
+    __tablename__ = "pacientes"
+    id_paciente = Column(Integer, primary_key=True, index=True)
+    nome = Column(String, index=True)
+    idade = Column(Integer)
+    genero = Column(String)
+
+class Leito(Base):
+    __tablename__ = "leitos"
+    id_leito = Column(Integer, primary_key=True, index=True)
+    tipo = Column(String)
+    ocupado = Column(Integer)
+
+class Profissional(Base):
+    __tablename__ = "profissionais"
+    id_profissional = Column(Integer, primary_key=True, index=True)
+    nome = Column(String)
+    setor = Column(String)
+    funcao = Column(String)
+
+class Atendimento(Base):
+    __tablename__ = "atendimentos"
+    id_atendimento = Column(Integer, primary_key=True, index=True)
+    data_hora = Column(DateTime)
+    tipo = Column(String)
+    origem = Column(String)
+    convenio = Column(String)
+    id_paciente = Column(Integer)
+    id_profissional = Column(Integer)
+
 Base.metadata.create_all(bind=engine)
 
-# Dependência que fornece uma sessão de banco de dados para cada requisição
+# Dependência do banco de dados
 def get_db():
     db = SessionLocal()
     try:
@@ -26,222 +61,209 @@ def get_db():
     finally:
         db.close()
 
-# Esquema Pydantic para ver todas as unidades
-class UnidadeResponse(BaseModel):
+# Schemas Pydantic
+class UnidadeHospitalarCreate(BaseModel):
+    nome: str
+    localizacao: str
+
+class UnidadeHospitalarResponse(UnidadeHospitalarCreate):
     id_unidade: int
-    nome_unidade: str
 
-    class Config:
-        orm_mode = True
+class PacienteCreate(BaseModel):
+    nome: str
+    idade: int
+    genero: str
 
-# Esquema Pydantic para a criação de unidade
-class UnidadeCreate(BaseModel):
-    nome_unidade: str
+class PacienteResponse(PacienteCreate):
+    id_paciente: int
 
-#Atualizar informaçoes da unidade hospitalar
-from typing import Optional
-class UnidadeUpdate(BaseModel):
-    nome_unidade: Optional[str]
+class LeitoCreate(BaseModel):
+    tipo: str
+    ocupado: int
 
-    class Config:
-        orm_mode = True
-        
-        
-# Rota GET para buscar todas as unidades hospitalares
-@app.get("/unidade/", response_model=List[UnidadeResponse])
-def get_unidades(db: Session = Depends(get_db)):
-    unidades = db.query(Unidade).all()
-    return unidades
+class LeitoResponse(LeitoCreate):
+    id_leito: int
 
-# Rota POST para criar uma nova unidade
-@app.post("/unidade/", response_model=UnidadeResponse)
-def create_unidade(unidade: UnidadeCreate, db: Session = Depends(get_db)):
-    new_unidade = Unidade(nome_unidade=unidade.nome_unidade)
+class ProfissionalCreate(BaseModel):
+    nome: str
+    setor: str
+    funcao: str
+
+class ProfissionalResponse(ProfissionalCreate):
+    id_profissional: int
+
+class AtendimentoCreate(BaseModel):
+    data_hora: datetime
+    tipo: str
+    origem: str
+    convenio: str
+    id_paciente: int
+    id_profissional: int
+
+class AtendimentoResponse(AtendimentoCreate):
+    id_atendimento: int
+
+# Rotas CRUD para Unidade Hospitalar
+@app.post("/unidade/", response_model=UnidadeHospitalarResponse)
+def create_unidade(unidade: UnidadeHospitalarCreate, db: Session = Depends(get_db)):
+    new_unidade = UnidadeHospitalar(**unidade.dict())
     db.add(new_unidade)
     db.commit()
     db.refresh(new_unidade)
     return new_unidade
 
-#Rota PUT para atualizar as informaçoes das unidades hospitalares buscando elas pelos ID, preferi do que
-@app.get("/unidades/{id_unidade}", response_model=UnidadeResponse)
-def get_unidade_by_id(id_unidade: int, db: Session = Depends(get_db)):
-    unidade = db.query(Unidade).filter(Unidade.id_unidade == id_unidade).first()
-    # Verifica se a unidade existe
+@app.get("/unidade/", response_model=List[UnidadeHospitalarResponse])
+def get_unidades(db: Session = Depends(get_db)):
+    return db.query(UnidadeHospitalar).all()
+
+@app.put("/unidade/{id_unidade}", response_model=UnidadeHospitalarResponse)
+def update_unidade(id_unidade: int, unidade_update: UnidadeHospitalarCreate, db: Session = Depends(get_db)):
+    unidade = db.query(UnidadeHospitalar).filter(UnidadeHospitalar.id_unidade == id_unidade).first()
     if unidade is None:
         raise HTTPException(status_code=404, detail="Unidade não encontrada")
+    for key, value in unidade_update.dict().items():
+        setattr(unidade, key, value)
+    db.commit()
+    db.refresh(unidade)
     return unidade
 
-# Rota DELETE para deletar uma unidade pelo ID
-@app.delete("/unidades/{id_unidade}", response_model=UnidadeResponse)
+@app.delete("/unidade/{id_unidade}", response_model=UnidadeHospitalarResponse)
 def delete_unidade(id_unidade: int, db: Session = Depends(get_db)):
-    # Busca a unidade pelo ID no banco de dados
-    unidade = db.query(Unidade).filter(Unidade.id_unidade == id_unidade).first()
-    # Verifica se a unidade existe
+    unidade = db.query(UnidadeHospitalar).filter(UnidadeHospitalar.id_unidade == id_unidade).first()
     if unidade is None:
         raise HTTPException(status_code=404, detail="Unidade não encontrada")
-    # Deleta a unidade encontada
     db.delete(unidade)
     db.commit()
-
     return unidade
 
-# Esquema Pydantic para criação de paciente
-class PacienteCreate(BaseModel):
-    nome: str
-    data_nascimento: str
-    endereco: str
-    cep: str
-    nome_mae: str
-    id_leito: int
-
-    class Config:
-        orm_mode = True
-
-# Esquema Pydantic para aparecer todos os pacientes registrados emodificar a dat de nascimento para date
-from datetime import date
-class PacienteResponse(BaseModel):
-    id_paciente: int
-    nome: str
-    data_nascimento: date
-    endereco: str
-    cep: str
-    nome_mae: str
-    id_leito: int
-
-    class Config:
-        orm_mode = True
-
-# Esquema Pydantic para atualização de paciente
-class PacienteUpdate(BaseModel):
-    nome: str
-    data_nascimento: str
-    endereco: str
-    cep: str
-    nome_mae: str
-    id_leito: int
-
-    class Config:
-        orm_mode = True
-
-# Rota POST para criar os pacientes
+# Rotas CRUD para Paciente
 @app.post("/paciente/", response_model=PacienteResponse)
 def create_paciente(paciente: PacienteCreate, db: Session = Depends(get_db)):
-    db_paciente = Paciente(
-        nome=paciente.nome,
-        data_nascimento=paciente.data_nascimento,
-        endereco=paciente.endereco,
-        cep=paciente.cep,
-        nome_mae=paciente.nome_mae,
-        id_leito=paciente.id_leito
-    )
-    db.add(db_paciente)
+    new_paciente = Paciente(**paciente.dict())
+    db.add(new_paciente)
     db.commit()
-    db.refresh(db_paciente)
-    return db_paciente
+    db.refresh(new_paciente)
+    return new_paciente
 
-# Rota GET para obter os pacientes
 @app.get("/paciente/", response_model=List[PacienteResponse])
-def get_paciente(db: Session = Depends(get_db)):
-    pacientes = db.query(Paciente).all()
-    return pacientes
+def get_pacientes(db: Session = Depends(get_db)):
+    return db.query(Paciente).all()
 
-# Rota PUT para atualizar as informaçoes dos pacientes
 @app.put("/paciente/{id_paciente}", response_model=PacienteResponse)
-def update_paciente(id_paciente: int, paciente_update: PacienteUpdate, db: Session = Depends(get_db)):
-    # Busca o paciente pelo ID
+def update_paciente(id_paciente: int, paciente_update: PacienteCreate, db: Session = Depends(get_db)):
     paciente = db.query(Paciente).filter(Paciente.id_paciente == id_paciente).first()
-
-    # Verifica se o paciente existe
     if paciente is None:
         raise HTTPException(status_code=404, detail="Paciente não encontrado")
-
-    # Atualiza as informações do paciente
-    paciente.nome = paciente_update.nome
-    paciente.data_nascimento = paciente_update.data_nascimento
-    paciente.endereco = paciente_update.endereco
-    paciente.cep = paciente_update.cep
-    paciente.nome_mae = paciente_update.nome_mae
-
-    # Salva as mudanças no banco de dados
+    for key, value in paciente_update.dict().items():
+        setattr(paciente, key, value)
     db.commit()
     db.refresh(paciente)
     return paciente
 
-#Rota DELETE para deletar paciente
-@app.delete("/paciente/{id_paciente}")
+@app.delete("/paciente/{id_paciente}", response_model=PacienteResponse)
 def delete_paciente(id_paciente: int, db: Session = Depends(get_db)):
-    # Busca o paciente pelo ID no banco de dados
     paciente = db.query(Paciente).filter(Paciente.id_paciente == id_paciente).first()
-
-    # Verifica se o paciente existe
     if paciente is None:
         raise HTTPException(status_code=404, detail="Paciente não encontrado")
-
-    # Deleta o paciente encontrado
     db.delete(paciente)
     db.commit()
     return paciente
 
-# Esquema Pydantic para criar um leito
-class LeitoCreate(BaseModel):
-    id_unidade: int  # ID da unidade já existente criado no BD
-    unidade_internacao: str
-
-    class Config:
-        orm_mode = True
-
-# Esquema Pydantic para resposta dos leitos qque foram criados
-class LeitoResponse(BaseModel):
-    id_leito: int
-    id_unidade: int
-    unidade_internacao: str
-
-    class Config:
-        orm_mode = True
-
-# Rota POST para criar um leito
+# Rotas CRUD para Leito
 @app.post("/leito/", response_model=LeitoResponse)
 def create_leito(leito: LeitoCreate, db: Session = Depends(get_db)):
-    # Verifica se a unidade existe
-    unidade = db.query(Unidade).filter(Unidade.id_unidade == leito.id_unidade).first()
-    if unidade is None:
-        raise HTTPException(status_code=404, detail="Unidade não encontrada")
-    
-    new_leito = Leito(
-        id_unidade=leito.id_unidade,
-        unidade_internacao=leito.unidade_internacao
-    )
+    new_leito = Leito(**leito.dict())
     db.add(new_leito)
     db.commit()
     db.refresh(new_leito)
     return new_leito
 
-# Rota GET para buscar todos os leitos
 @app.get("/leito/", response_model=List[LeitoResponse])
 def get_leitos(db: Session = Depends(get_db)):
-    leitos = db.query(Leito).all()
-    return leitos
+    return db.query(Leito).all()
 
-# Rota PUT para atualizar um leito
 @app.put("/leito/{id_leito}", response_model=LeitoResponse)
-def update_leito(id_leito: int, leito: LeitoCreate, db: Session = Depends(get_db)):
-    leito_db = db.query(Leito).filter(Leito.id_leito == id_leito).first()
-    if leito_db is None:
+def update_leito(id_leito: int, leito_update: LeitoCreate, db: Session = Depends(get_db)):
+    leito = db.query(Leito).filter(Leito.id_leito == id_leito).first()
+    if leito is None:
         raise HTTPException(status_code=404, detail="Leito não encontrado")
-    
-    leito_db.id_unidade = leito.id_unidade
-    leito_db.unidade_internacao = leito.unidade_internacao
+    for key, value in leito_update.dict().items():
+        setattr(leito, key, value)
     db.commit()
-    db.refresh(leito_db)
-    return leito_db
+    db.refresh(leito)
+    return leito
 
-# Rota DELETE para deletar um leito chamando o ID dele
 @app.delete("/leito/{id_leito}", response_model=LeitoResponse)
 def delete_leito(id_leito: int, db: Session = Depends(get_db)):
     leito = db.query(Leito).filter(Leito.id_leito == id_leito).first()
     if leito is None:
         raise HTTPException(status_code=404, detail="Leito não encontrado")
-    
     db.delete(leito)
     db.commit()
     return leito
+
+# Rotas CRUD para Profissional
+@app.post("/profissional/", response_model=ProfissionalResponse)
+def create_profissional(profissional: ProfissionalCreate, db: Session = Depends(get_db)):
+    new_profissional = Profissional(**profissional.dict())
+    db.add(new_profissional)
+    db.commit()
+    db.refresh(new_profissional)
+    return new_profissional
+
+@app.get("/profissional/", response_model=List[ProfissionalResponse])
+def get_profissionais(db: Session = Depends(get_db)):
+    return db.query(Profissional).all()
+
+@app.put("/profissional/{id_profissional}", response_model=ProfissionalResponse)
+def update_profissional(id_profissional: int, profissional_update: ProfissionalCreate, db: Session = Depends(get_db)):
+    profissional = db.query(Profissional).filter(Profissional.id_profissional == id_profissional).first()
+    if profissional is None:
+        raise HTTPException(status_code=404, detail="Profissional não encontrado")
+    for key, value in profissional_update.dict().items():
+        setattr(profissional, key, value)
+    db.commit()
+    db.refresh(profissional)
+    return profissional
+
+@app.delete("/profissional/{id_profissional}", response_model=ProfissionalResponse)
+def delete_profissional(id_profissional: int, db: Session = Depends(get_db)):
+    profissional = db.query(Profissional).filter(Profissional.id_profissional == id_profissional).first()
+    if profissional is None:
+        raise HTTPException(status_code=404, detail="Profissional não encontrado")
+    db.delete(profissional)
+    db.commit()
+    return profissional
+
+# Rotas CRUD para Atendimento
+@app.post("/atendimento/", response_model=AtendimentoResponse)
+def create_atendimento(atendimento: AtendimentoCreate, db: Session = Depends(get_db)):
+    new_atendimento = Atendimento(**atendimento.dict())
+    db.add(new_atendimento)
+    db.commit()
+    db.refresh(new_atendimento)
+    return new_atendimento
+
+@app.get("/atendimento/", response_model=List[AtendimentoResponse])
+def get_atendimentos(db: Session = Depends(get_db)):
+    return db.query(Atendimento).all()
+
+@app.put("/atendimento/{id_atendimento}", response_model=AtendimentoResponse)
+def update_atendimento(id_atendimento: int, atendimento_update: AtendimentoCreate, db: Session = Depends(get_db)):
+    atendimento = db.query(Atendimento).filter(Atendimento.id_atendimento == id_atendimento).first()
+    if atendimento is None:
+        raise HTTPException(status_code=404, detail="Atendimento não encontrado")
+    for key, value in atendimento_update.dict().items():
+        setattr(atendimento, key, value)
+    db.commit()
+    db.refresh(atendimento)
+    return atendimento
+
+@app.delete("/atendimento/{id_atendimento}", response_model=AtendimentoResponse)
+def delete_atendimento(id_atendimento: int, db: Session = Depends(get_db)):
+    atendimento = db.query(Atendimento).filter(Atendimento.id_atendimento == id_atendimento).first()
+    if atendimento is None:
+        raise HTTPException(status_code=404, detail="Atendimento não encontrado")
+    db.delete(atendimento)
+    db.commit()
+    return atendimento
