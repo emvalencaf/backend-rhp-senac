@@ -228,11 +228,3 @@ Aqui estão exemplos de dados em JSON que podem ser usados para teste da API.
   ]
 }
 ```
-
-## Modelos de Dados
-
-- **UnidadeHospitalar**: Representa uma unidade hospitalar com nome e localização.
-- **Paciente**: Representa um paciente com nome, idade e gênero.
-- **Leito**: Representa um leito hospitalar com tipo e status de ocupação.
-- **Profissional**: Representa um profissional de saúde com nome, setor e função.
-- **Atendimento**: Representa um atendimento hospitalar com data/hora, tipo, origem, convênio, e referências a paciente e profissional.
