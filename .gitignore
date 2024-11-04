@@ -5,7 +5,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-ambiente-backend-rotas/
+ambiente-backend-rotas
 */env/
 */.env/
 # Ignorar arquivos de log

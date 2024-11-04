@@ -2,7 +2,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from models.models import Unidade, Paciente, Leito # Importa os models
+from models.models import Unidade, Paciente, Leito, Atendimento, Profissional # Importa os models
 from database import SessionLocal, engine, Base  # Importa a sessão e a engine do database.py
 from pydantic import BaseModel
 from typing import List
@@ -245,3 +245,162 @@ def delete_leito(id_leito: int, db: Session = Depends(get_db)):
     db.delete(leito)
     db.commit()
     return leito
+
+# Esquema Pydantic para criar um Profissional
+class ProfissionalCreate(BaseModel):
+    nome: str
+    setor: str
+    funcao: str
+
+    class Config:
+        orm_mode = True
+        
+# Esquema Pydantic para resposta de Profissional
+class ProfissionalResponse(BaseModel):
+    id_profissional: int
+    nome: str
+    setor: str
+    funcao: str
+
+    class Config:
+        orm_mode = True
+
+# Rota POST para criar um novo profissional
+@app.post("/profissional/", response_model=ProfissionalResponse)
+def create_profissional(profissional: ProfissionalCreate, db: Session = Depends(get_db)):
+    new_profissional = Profissional(
+        nome=profissional.nome,
+        setor=profissional.setor,
+        funcao=profissional.funcao
+    )
+    db.add(new_profissional)
+    db.commit()
+    db.refresh(new_profissional)
+    return new_profissional
+
+# Rota GET para buscar todos os profissionais
+@app.get("/profissional/", response_model=List[ProfissionalResponse])
+def get_profissionais(db: Session = Depends(get_db)):
+    profissionais = db.query(Profissional).all()
+    return profissionais
+
+# Rota GET para buscar um profissional pelo ID
+@app.get("/profissional/{id_profissional}", response_model=ProfissionalResponse)
+def get_profissional_by_id(id_profissional: int, db: Session = Depends(get_db)):
+    profissional = db.query(Profissional).filter(Profissional.id_profissional == id_profissional).first()
+    if profissional is None:
+        raise HTTPException(status_code=404, detail="Profissional não encontrado")
+    return profissional
+
+# Rota PUT para atualizar um profissional
+@app.put("/profissional/{id_profissional}", response_model=ProfissionalResponse)
+def update_profissional(id_profissional: int, profissional_data: ProfissionalCreate, db: Session = Depends(get_db)):
+    profissional = db.query(Profissional).filter(Profissional.id_profissional == id_profissional).first()
+    if profissional is None:
+        raise HTTPException(status_code=404, detail="Profissional não encontrado")
+
+    profissional.nome = profissional_data.nome
+    profissional.setor = profissional_data.setor
+    profissional.funcao = profissional_data.funcao
+
+    db.commit()
+    db.refresh(profissional)
+    return profissional
+
+
+# Rota DELETE para deletar um profissional
+@app.delete("/profissional/{id_profissional}", response_model=ProfissionalResponse)
+def delete_profissional(id_profissional: int, db: Session = Depends(get_db)):
+    profissional = db.query(Profissional).filter(Profissional.id_profissional == id_profissional).first()
+    if profissional is None:
+        raise HTTPException(status_code=404, detail="Profissional não encontrado")
+
+    db.delete(profissional)
+    db.commit()
+    return profissional
+
+# Esquema Pydantic para criar um Atendimento
+
+class AtendimentoCreate(BaseModel):
+    data_hora: date
+    tipo: str
+    origem: str
+    convenio: str
+    id_paciente: int
+    id_profissional: int
+
+    class Config:
+        orm_mode = True
+
+# Esquema Pydantic para resposta de Atendimento
+class AtendimentoResponse(BaseModel):
+    id_atendimento: int
+    data_hora: date
+    tipo: str
+    origem: str
+    convenio: str
+    id_paciente: int
+    id_profissional: int
+
+    class Config:
+        orm_mode = True
+        
+# Rota POST para criar um novo atendimento
+@app.post("/atendimento/", response_model=AtendimentoResponse)
+def create_atendimento(atendimento: AtendimentoCreate, db: Session = Depends(get_db)):
+    new_atendimento = Atendimento(
+        data_hora=atendimento.data_hora,
+        tipo=atendimento.tipo,
+        origem=atendimento.origem,
+        convenio=atendimento.convenio,
+        id_paciente=atendimento.id_paciente,
+        id_profissional=atendimento.id_profissional
+    )
+    db.add(new_atendimento)
+    db.commit()
+    db.refresh(new_atendimento)
+    return new_atendimento
+
+# Rota GET para buscar todos os atendimentos
+@app.get("/atendimento/", response_model=List[AtendimentoResponse])
+def get_atendimentos(db: Session = Depends(get_db)):
+    atendimentos = db.query(Atendimento).all()
+    return atendimentos
+
+# Rota GET para buscar um atendimento pelo ID
+@app.get("/atendimento/{id_atendimento}", response_model=AtendimentoResponse)
+def get_atendimento_by_id(id_atendimento: int, db: Session = Depends(get_db)):
+    atendimento = db.query(Atendimento).filter(Atendimento.id_atendimento == id_atendimento).first()
+    if atendimento is None:
+        raise HTTPException(status_code=404, detail="Atendimento não encontrado")
+    return atendimento
+
+# Rota PUT para atualizar um atendimento
+@app.put("/atendimento/{id_atendimento}", response_model=AtendimentoResponse)
+def update_atendimento(id_atendimento: int, atendimento_data: AtendimentoCreate, db: Session = Depends(get_db)):
+    atendimento = db.query(Atendimento).filter(Atendimento.id_atendimento == id_atendimento).first()
+    if atendimento is None:
+        raise HTTPException(status_code=404, detail="Atendimento não encontrado")
+
+    atendimento.data_hora = atendimento_data.data_hora
+    atendimento.tipo = atendimento_data.tipo
+    atendimento.origem = atendimento_data.origem
+    atendimento.convenio = atendimento_data.convenio
+    atendimento.id_paciente = atendimento_data.id_paciente
+    atendimento.id_profissional = atendimento_data.id_profissional
+
+    db.commit()
+    db.refresh(atendimento)
+    return atendimento
+
+
+# Rota DELETE para deletar um atendimento
+@app.delete("/atendimento/{id_atendimento}", response_model=AtendimentoResponse)
+def delete_atendimento(id_atendimento: int, db: Session = Depends(get_db)):
+    atendimento = db.query(Atendimento).filter(Atendimento.id_atendimento == id_atendimento).first()
+    if atendimento is None:
+        raise HTTPException(status_code=404, detail="Atendimento não encontrado")
+
+    db.delete(atendimento)
+    db.commit()
+    return atendimento
