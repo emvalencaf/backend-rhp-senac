@@ -1,0 +1,30 @@
+# Ignorar ambiente virtual
+venv/
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+ambiente-backend-rotas/
+*/env/
+*/.env/
+# Ignorar arquivos de log
+*.log
+
+# Ignorar configurações do IDE (por exemplo, PyCharm)
+.idea/
+*.iml
+
+# Ignorar arquivos de configuração do VSCode
+.vscode/
+
+# Ignorar arquivos do Docker
+*.db
+*.sqlite3
+docker-compose.yml
+docker-compose.override.yml
+.dockerignore
+
+# Ignorar arquivos do sistema operacional
+.DS_Store
+Thumbs.db
