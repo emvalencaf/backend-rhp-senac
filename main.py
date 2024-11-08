@@ -1,5 +1,6 @@
 # main.py
 from fastapi import FastAPI, Depends, HTTPException
+from datetime import datetime
 from sqlalchemy.orm import Session
 from typing import List
 from models.models import Unidade, Paciente, Leito, Atendimento, Profissional # Importa os models
@@ -254,7 +255,7 @@ class ProfissionalCreate(BaseModel):
 
     class Config:
         orm_mode = True
-        
+
 # Esquema Pydantic para resposta de Profissional
 class ProfissionalResponse(BaseModel):
     id_profissional: int
@@ -320,7 +321,6 @@ def delete_profissional(id_profissional: int, db: Session = Depends(get_db)):
     return profissional
 
 # Esquema Pydantic para criar um Atendimento
-
 class AtendimentoCreate(BaseModel):
     data_hora: date
     tipo: str
@@ -344,7 +344,7 @@ class AtendimentoResponse(BaseModel):
 
     class Config:
         orm_mode = True
-        
+
 # Rota POST para criar um novo atendimento
 @app.post("/atendimento/", response_model=AtendimentoResponse)
 def create_atendimento(atendimento: AtendimentoCreate, db: Session = Depends(get_db)):
@@ -392,7 +392,6 @@ def update_atendimento(id_atendimento: int, atendimento_data: AtendimentoCreate,
     db.commit()
     db.refresh(atendimento)
     return atendimento
-
 
 # Rota DELETE para deletar um atendimento
 @app.delete("/atendimento/{id_atendimento}", response_model=AtendimentoResponse)
