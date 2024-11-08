@@ -59,7 +59,7 @@ class Atendimento(Base):
     __tablename__ = 'atendimento'
     
     id_atendimento = Column(Integer, primary_key=True, autoincrement=True)
-    data_hora = Column(TIMESTAMP)
+    data_hora = Column(Date)
     tipo = Column(String(100))
     origem = Column(String(100))
     convenio = Column(String(100))

@@ -1,5 +1,5 @@
 # backend-rhp-senac
-Projeto da Residência do Porto Digital RHP
+Projeto de Residência do SENAC RHP
 
 ## Problema
 

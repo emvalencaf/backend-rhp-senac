@@ -308,6 +308,7 @@ def update_profissional(id_profissional: int, profissional_data: ProfissionalCre
     db.refresh(profissional)
     return profissional
 
+
 # Rota DELETE para deletar um profissional
 @app.delete("/profissional/{id_profissional}", response_model=ProfissionalResponse)
 def delete_profissional(id_profissional: int, db: Session = Depends(get_db)):
@@ -321,7 +322,7 @@ def delete_profissional(id_profissional: int, db: Session = Depends(get_db)):
 
 # Esquema Pydantic para criar um Atendimento
 class AtendimentoCreate(BaseModel):
-    data_hora: datetime
+    data_hora: date
     tipo: str
     origem: str
     convenio: str
@@ -334,7 +335,7 @@ class AtendimentoCreate(BaseModel):
 # Esquema Pydantic para resposta de Atendimento
 class AtendimentoResponse(BaseModel):
     id_atendimento: int
-    data_hora: datetime
+    data_hora: date
     tipo: str
     origem: str
     convenio: str
