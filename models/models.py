@@ -2,7 +2,7 @@
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import relationship
 from database import Base  # Importa a Base do database.py
-from datetime import datetime
+from datetime import date
 
 # Modelo para a tabela Unidade
 class Unidade(Base):
@@ -32,8 +32,8 @@ class Leito(Base):
 # Modelo para a tabela Paciente
 class Paciente(Base):
     __tablename__ = 'paciente'
-    
-    cpf = Column(String(11), primary_key=True)
+    id_paciente = Column (Integer, primary_key=True, autoincrement=True)
+    cpf = Column(String(11), nullable=False)
     nome = Column(String(255), nullable=False)
     data_nascimento = Column(Date)
     endereco = Column(String(255))
@@ -77,7 +77,7 @@ class Atendimento(Base):
 
 # Modelo para a tabela Transferencia
 class Transferencia(Base):
-    __tablename__ = 'transferencia'
+    __tablename__ = 'Transferencia'
     
     id_transferencia = Column(Integer, primary_key=True, autoincrement=True)
     cpf = Column(String(11), ForeignKey('paciente.cpf'))
@@ -90,9 +90,9 @@ class Transferencia(Base):
     leito_origem = relationship("Leito", foreign_keys=[codigo_leito_origem], back_populates="transferencias_origem")
     leito_destino = relationship("Leito", foreign_keys=[codigo_leito_destino], back_populates="transferencias_destino")
 
-# Modelo para a tabela Alta
+# Modelo Pydantic para a tabela Alta
 class Alta(Base):
-    __tablename__ = 'alta'
+    __tablename__ = 'Alta'
     
     id_alta = Column(Integer, primary_key=True, autoincrement=True)
     data_hora_alta = Column(TIMESTAMP)

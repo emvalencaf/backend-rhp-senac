@@ -1,12 +1,11 @@
 # main.py
 from fastapi import FastAPI, Depends, HTTPException
-from datetime import datetime
-from sqlalchemy.orm import Session
+from datetime import date
+from sqlalchemy.orm import Session, joinedload
 from typing import List
-from models.models import Unidade, Paciente, Leito, Atendimento, Profissional # Importa os models
+from models.models import Unidade, Paciente, Leito, Transferencia, Alta, Atendimento, Profissional # Importa os models
 from database import SessionLocal, engine, Base  # Importa a sessão e a engine do database.py
 from pydantic import BaseModel
-from typing import List
 
 # Cria o aplicativo FastAPI
 app = FastAPI()
@@ -88,8 +87,9 @@ def delete_unidade(id_unidade: int, db: Session = Depends(get_db)):
 
 # Esquema Pydantic para criação de paciente
 class PacienteCreate(BaseModel):
+    cpf: str
     nome: str
-    data_nascimento: str
+    data_nascimento: date
     endereco: str
     cep: str
     nome_mae: str
@@ -99,9 +99,8 @@ class PacienteCreate(BaseModel):
         orm_mode = True
 
 # Esquema Pydantic para aparecer todos os pacientes registrados emodificar a dat de nascimento para date
-from datetime import date
 class PacienteResponse(BaseModel):
-    id_paciente: int
+    cpf: str
     nome: str
     data_nascimento: date
     endereco: str
@@ -114,8 +113,9 @@ class PacienteResponse(BaseModel):
 
 # Esquema Pydantic para atualização de paciente
 class PacienteUpdate(BaseModel):
+    cpf:str
     nome: str
-    data_nascimento: str
+    data_nascimento: date
     endereco: str
     cep: str
     nome_mae: str
@@ -128,6 +128,7 @@ class PacienteUpdate(BaseModel):
 @app.post("/paciente/", response_model=PacienteResponse)
 def create_paciente(paciente: PacienteCreate, db: Session = Depends(get_db)):
     db_paciente = Paciente(
+        cpf=paciente.cpf,
         nome=paciente.nome,
         data_nascimento=paciente.data_nascimento,
         endereco=paciente.endereco,
@@ -147,32 +148,32 @@ def get_paciente(db: Session = Depends(get_db)):
     return pacientes
 
 # Rota PUT para atualizar as informaçoes dos pacientes
-@app.put("/paciente/{id_paciente}", response_model=PacienteResponse)
-def update_paciente(id_paciente: int, paciente_update: PacienteUpdate, db: Session = Depends(get_db)):
+@app.put("/paciente/{cpf}", response_model=PacienteResponse)
+def update_paciente(cpf:str, paciente_update: PacienteUpdate, db: Session = Depends(get_db)):
     # Busca o paciente pelo ID
-    paciente = db.query(Paciente).filter(Paciente.id_paciente == id_paciente).first()
+    paciente = db.query(Paciente).filter(paciente.cpf == cpf).first()
 
     # Verifica se o paciente existe
     if paciente is None:
         raise HTTPException(status_code=404, detail="Paciente não encontrado")
 
     # Atualiza as informações do paciente
+    paciente.cpf = paciente_update.cpf
     paciente.nome = paciente_update.nome
     paciente.data_nascimento = paciente_update.data_nascimento
     paciente.endereco = paciente_update.endereco
     paciente.cep = paciente_update.cep
     paciente.nome_mae = paciente_update.nome_mae
 
-    # Salva as mudanças no banco de dados
     db.commit()
     db.refresh(paciente)
     return paciente
 
 #Rota DELETE para deletar paciente
-@app.delete("/paciente/{id_paciente}")
-def delete_paciente(id_paciente: int, db: Session = Depends(get_db)):
+@app.delete("/paciente/{cpf}")
+def delete_paciente(cpf: str, db: Session = Depends(get_db)):
     # Busca o paciente pelo ID no banco de dados
-    paciente = db.query(Paciente).filter(Paciente.id_paciente == id_paciente).first()
+    paciente = db.query(Paciente).filter(Paciente.cpf == cpf).first()
 
     # Verifica se o paciente existe
     if paciente is None:
@@ -247,6 +248,166 @@ def delete_leito(id_leito: int, db: Session = Depends(get_db)):
     db.commit()
     return leito
 
+# Esquema Pydantic para criação de transferência
+class TransferenciaCreate(BaseModel):
+    cpf: str
+    codigo_leito_origem: int
+    codigo_leito_destino: int
+    datahora_transferencia: date
+
+    class Config:
+        orm_mode = True
+
+# Esquema Pydantic para resposta da transferência
+class TransferenciaResponse(BaseModel):
+    id_transferencia: int
+    cpf: str
+    codigo_leito_origem: int
+    codigo_leito_destino: int
+    datahora_transferencia: date
+
+    class Config:
+        orm_mode = True
+@app.get("/transferencia/", response_model=List[TransferenciaResponse])
+def get_transferencias(db: Session = Depends(get_db)):
+    transferencias = db.query(Transferencia).all()
+    return transferencias
+
+@app.post("/Transferencia/", response_model=TransferenciaResponse)
+def create_transferencia(transferencia: TransferenciaCreate, db: Session = Depends(get_db)):
+    # Verifica se o paciente existe
+    paciente = db.query(Paciente).filter(Paciente.cpf == transferencia.cpf).first()
+    if paciente is None:
+        raise HTTPException(status_code=404, detail="Paciente não encontrado")
+
+    # Verifica se os leitos de origem e destino existem
+    leito_origem = db.query(Leito).filter(Leito.id_leito == transferencia.codigo_leito_origem).first()
+    leito_destino = db.query(Leito).filter(Leito.id_leito == transferencia.codigo_leito_destino).first()
+    if leito_origem is None or leito_destino is None:
+        raise HTTPException(status_code=404, detail="Leito de origem ou destino não encontrado")
+
+    # Cria a nova transferência
+    new_transferencia = Transferencia(
+        cpf=transferencia.cpf,
+        codigo_leito_origem=transferencia.codigo_leito_origem,
+        codigo_leito_destino=transferencia.codigo_leito_destino,
+        datahora_transferencia=transferencia.datahora_transferencia
+    )
+    db.add(new_transferencia)
+    db.commit()
+    db.refresh(new_transferencia)
+    return new_transferencia
+
+@app.put("/transferencia/{id_transferencia}", response_model=TransferenciaResponse)
+def update_transferencia(id_transferencia: int, transferencia_update: TransferenciaCreate, db: Session = Depends(get_db)):
+    # Busca a transferência existente pelo ID
+    transferencia = db.query(Transferencia).filter(Transferencia.id_transferencia == id_transferencia).first()
+    if transferencia is None:
+        raise HTTPException(status_code=404, detail="Transferência não encontrada")
+
+    # Atualiza os campos
+    transferencia.cpf = transferencia_update.cpf
+    transferencia.codigo_leito_origem = transferencia_update.codigo_leito_origem
+    transferencia.codigo_leito_destino = transferencia_update.codigo_leito_destino
+    transferencia.datahora_transferencia = transferencia_update.datahora_transferencia
+
+    db.commit()
+    db.refresh(transferencia)
+    return transferencia
+
+@app.delete("/transferencia/{id_transferencia}", response_model=TransferenciaResponse)
+def delete_transferencia(id_transferencia: int, db: Session = Depends(get_db)):
+    transferencia = db.query(Transferencia).filter(Transferencia.id_transferencia == id_transferencia).first()
+    if transferencia is None:
+        raise HTTPException(status_code=404, detail="Transferência não encontrada")
+    
+    db.delete(transferencia)
+    db.commit()
+    return transferencia
+
+# Modelo Pydantic para criação de uma nova Alta
+class AltaCreate(BaseModel):
+    data_hora_alta: date
+    motivo_alta: str
+    cpf: str  # CPF do paciente
+
+    class Config:
+        orm_mode = True
+
+# Modelo Pydantic para exibir as Altas registradas
+class AltaResponse(BaseModel):
+    id_alta: int
+    data_hora_alta: date
+    motivo_alta: str
+    cpf: str  # CPF do paciente
+
+    class Config:
+        orm_mode = True
+
+# Modelo Pydantic para atualizar uma Alta
+class AltaUpdate(BaseModel):
+    data_hora_alta: Optional[date] = None
+    motivo_alta: Optional[str] = None
+    cpf: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+        
+# Esquema Pydantic para exibir as Altas com os dados do paciente associado
+class AltaResponse(BaseModel):
+    id_alta: int
+    data_hora_alta: date
+    motivo_alta: str
+    cpf: str
+    paciente: Optional[PacienteResponse]  # Incluindo o paciente no retorno
+
+    class Config:
+        orm_mode = True
+        
+# Rota POST para criar uma nova Alta
+@app.post("/alta/", response_model=AltaResponse)
+def create_alta(alta: AltaCreate, db: Session = Depends(get_db)):
+    db_alta = Alta(
+        data_hora_alta=alta.data_hora_alta,
+        motivo_alta=alta.motivo_alta,
+        cpf=alta.cpf
+    )
+    db.add(db_alta)
+    db.commit()
+    db.refresh(db_alta)
+    return db_alta
+
+# Rota GET para listar todas as Altas
+@app.get("/alta/", response_model=List[AltaResponse])
+def get_altas(db: Session = Depends(get_db)):
+    altas = db.query(Alta).all()
+    return altas
+
+# Rota GET para obter uma Alta específica com dados do paciente associado
+@app.get("/alta/{cpf}", response_model=AltaResponse)
+def get_alta(cpf: str, db: Session = Depends(get_db)):
+    alta = db.query(Alta).options(joinedload(Alta.paciente)).filter(Alta.cpf == cpf).first()
+    if alta is None:
+        raise HTTPException(status_code=404, detail="Alta não encontrada")
+    return alta
+
+# Rota DELETE para remover Altas pelo CPF do paciente
+@app.delete("/alta/paciente/{cpf}", response_model=List[AltaResponse])
+def delete_altas_by_cpf(cpf: str, db: Session = Depends(get_db)):
+    # Busca todas as altas relacionadas ao CPF
+    altas = db.query(Alta).filter(Alta.cpf == cpf).all()
+
+    # Verifica se existe alguma alta associada ao CPF
+    if not altas:
+        raise HTTPException(status_code=404, detail="Nenhuma alta encontrada para este CPF")
+
+    # Remove cada alta encontrada
+    for alta in altas:
+        db.delete(alta)
+    # Confirma a transação
+    db.commit()
+    return altas
+
 # Esquema Pydantic para criar um Profissional
 class ProfissionalCreate(BaseModel):
     nome: str
@@ -307,7 +468,6 @@ def update_profissional(id_profissional: int, profissional_data: ProfissionalCre
     db.commit()
     db.refresh(profissional)
     return profissional
-
 
 # Rota DELETE para deletar um profissional
 @app.delete("/profissional/{id_profissional}", response_model=ProfissionalResponse)
