@@ -5,10 +5,10 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-ambiente-backend-rotas
 */env/
 */.env/
-# Ignorar arquivos de log
+arquivo_secreto.txt
+pasta_temp/
 *.log
 
 # Ignorar configurações do IDE (por exemplo, PyCharm)
