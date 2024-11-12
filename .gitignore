@@ -10,6 +10,9 @@ __pycache__/
 arquivo_secreto.txt
 pasta_temp/
 *.log
+.env
+.venv/
+data
 
 # Ignorar configurações do IDE (por exemplo, PyCharm)
 .idea/

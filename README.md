@@ -44,6 +44,22 @@ Essa API permite gerenciar dados hospitalares, incluindo unidades hospitalares, 
    uvicorn main:app --reload
    ```
 
+## Tratamento de Error de Conexão e Banco de Dados
+
+A persistência dos dados locais ocorrerá sempre que o banco de dados estiver fora do ar e se fará por meio da função `save_local_stage()` que recebe os parâmetros: `key_partition: str`, `action: str` e `data: dict`.
+
+- A `key_partition` é a chave de partição e corresponde a entidade, por exemplo: `paciente`
+- A `action` funciona como uma segunda chave de partição e corresponde a ação que se busca salvar, as quais podem ser: `create` ou `update`.
+- A `data` refere-se aos dados que serão salvos localmente (em formato `json`).
+
+Os dados serão persistidos em `json` com a seguinte partição `<action>/<entidade>/<ano>/<mes>/<dia>/<timestamp>.json` isso facilitará para a função *CRON Job* fazer o batch por `action` e `entity` e ordenar os registros.
+
+É possível determinar por variáveis de ambiente em que local serão persistidos os dados localmente. Pelas seguintes variáveis que devem ser declaradas no arquivo `.env`:
+```
+STAGING_AREA_PATH=<caminho do repositório de dados local>
+IS_ABSOLUTE_STAGING_AREA_PATH=<se o caminho é absoluto ou relativo>
+```
+
 ## Endpoints
 
 ### 1. Unidade Hospitalar
