@@ -68,7 +68,7 @@ class Atendimento(Base):
     tipo = Column(String(100))
     origem = Column(String(100))
     convenio = Column(String(100))
-    id_paciente = Column(String(11), ForeignKey('paciente.cpf'))
+    cpf = Column(String(11), ForeignKey('paciente.cpf'))
     id_profissional = Column(Integer, ForeignKey('profissional.id_profissional'))
     
     # Relacionamento com as tabelas Paciente e Profissional
