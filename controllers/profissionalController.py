@@ -23,6 +23,7 @@ def get_db():
 class ProfissionalResponse(BaseModel):
     id_profissional: int
     nome: str
+    cpf: str
     especialidade: str
     registro_profissional: str
     telefone: str
@@ -34,6 +35,7 @@ class ProfissionalResponse(BaseModel):
 # Esquema Pydantic para a criação de profissional
 class ProfissionalCreate(BaseModel):
     nome: str
+    cpf: str
     especialidade: str
     registro_profissional: str
     telefone: str
@@ -42,6 +44,7 @@ class ProfissionalCreate(BaseModel):
 # Esquema Pydantic para atualizar profissional
 class ProfissionalUpdate(BaseModel):
     nome: Optional[str] = None
+    cpf: Optional[str] = None
     especialidade: Optional[str] = None
     registro_profissional: Optional[str] = None
     telefone: Optional[str] = None
@@ -70,15 +73,6 @@ def get_profissional_by_id(id_profissional: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Profissional não encontrado")
     return profissional
 
-@router.delete("/{id_profissional}")
-def delete_profissional(id_profissional: int, db: Session = Depends(get_db)):
-    profissional = db.query(Profissional).filter(Profissional.id_profissional == id_profissional).first()
-    if profissional is None:
-        raise HTTPException(status_code=404, detail="Profissional não encontrado")
-    db.delete(profissional)
-    db.commit()
-    return {"message": "Profissional deletado com sucesso"}
-
 @router.put("/{id_profissional}", response_model=ProfissionalResponse)
 def update_profissional(id_profissional: int, profissional_update: ProfissionalUpdate, db: Session = Depends(get_db)):
     profissional = db.query(Profissional).filter(Profissional.id_profissional == id_profissional).first()
@@ -91,3 +85,12 @@ def update_profissional(id_profissional: int, profissional_update: ProfissionalU
     db.commit()
     db.refresh(profissional)
     return profissional
+
+@router.delete("/{id_profissional}")
+def delete_profissional(id_profissional: int, db: Session = Depends(get_db)):
+    profissional = db.query(Profissional).filter(Profissional.id_profissional == id_profissional).first()
+    if profissional is None:
+        raise HTTPException(status_code=404, detail="Profissional não encontrado")
+    db.delete(profissional)
+    db.commit()
+    return {"message": "Profissional deletado com sucesso"}
