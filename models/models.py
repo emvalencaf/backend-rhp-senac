@@ -53,6 +53,7 @@ class Profissional(Base):
     
     id_profissional = Column(Integer, primary_key=True, autoincrement=True)
     nome = Column(String(255))
+    cpf = Column(String(11))
     setor = Column(String(255))
     funcao = Column(String(255))
     

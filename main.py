@@ -9,6 +9,16 @@ from database import SessionLocal, engine, Base  # Importa a sessão e a engine 
 from pydantic import BaseModel
 from sqlalchemy.exc import OperationalError, DatabaseError
 
+#importando controllers
+from controllers.altaController import router as alta_router
+from controllers.atendimentoController import router as atendimento_router
+from controllers.leitoController import router as leito_router
+from controllers.pacienteController import router as paciente_router
+from controllers.profissionalController import router as profissional_router
+from controllers.testController import router as test_router
+from controllers.transferenciaController import router as transferencia_router
+from controllers.unidadeController import router as unidade_router
+
 # Cria o aplicativo FastAPI
 app = FastAPI()
 
@@ -28,4 +38,12 @@ def get_db():
     finally:
         db.close()
 
-
+# Adicionando as rotas
+app.include_router(alta_router)
+app.include_router(atendimento_router)
+app.include_router(leito_router)
+app.include_router(paciente_router)
+app.include_router(profissional_router)
+app.include_router(test_router)
+app.include_router(transferencia_router)
+app.include_router(unidade_router)
