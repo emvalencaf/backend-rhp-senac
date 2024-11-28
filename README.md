@@ -42,6 +42,7 @@ Essa API permite gerenciar dados hospitalares, incluindo unidades hospitalares, 
 3. Execute o servidor com o comando:
    ```bash
    uvicorn main:app --reload
+   python -m uvicorn main:app --reload
    ```
 
 ## Tratamento de Error de Conexão e Banco de Dados
@@ -60,187 +61,12 @@ STAGING_AREA_PATH=<caminho do repositório de dados local>
 IS_ABSOLUTE_STAGING_AREA_PATH=<se o caminho é absoluto ou relativo>
 ```
 
-## Endpoints
+# 🌐 Endpoint disponível no Postman
 
-### 1. Unidade Hospitalar
+## Você pode acessar todos os endpoints da API diretamente no Postman para facilitar os testes e a integração. 🚀
 
-#### Criar Unidade
-- **POST** `/unidade/`
-- **Exemplo de JSON**:
-  ```json
-  {
-    "nome": "Hospital Central",
-    "localizacao": "Centro"
-  }
-  ```
-- **Resposta**:
-  ```json
-  {
-    "id_unidade": 1,
-    "nome": "Hospital Central",
-    "localizacao": "Centro"
-  }
-  ```
+### Se você ainda não possui as configurações ou a coleção do Postman, entre em contato com o Time de Desenvolvimento 💻 para solicitar ajuda. Eles poderão:
 
-#### Listar Unidades
-- **GET** `/unidade/`
-- **Resposta**:
-  ```json
-  [
-    {
-      "id_unidade": 1,
-      "nome": "Hospital Central",
-      "localizacao": "Centro"
-    }
-  ]
-  ```
-
-#### Atualizar Unidade
-- **PUT** `/unidade/{id_unidade}`
-- **Exemplo de JSON**:
-  ```json
-  {
-    "nome": "Hospital Atualizado",
-    "localizacao": "Zona Norte"
-  }
-  ```
-
-#### Deletar Unidade
-- **DELETE** `/unidade/{id_unidade}`
-
-### 2. Pacientes
-
-#### Criar Paciente
-- **POST** `/paciente/`
-- **Exemplo de JSON**:
-  ```json
-  {
-  "nome": "João da Silva",
-  "data_nascimento": "1980-05-15",
-  "endereco": "Rua das Flores, 123",
-  "cep": "12345-678",
-  "nome_mae": "Maria da Silva",
-  "id_leito": 3
-  }
-  ```
-
-#### Listar Pacientes
-- **GET** `/paciente/`
-  
-#### Atualizar Paciente
-- **PUT** `/paciente/{id_paciente}`
-  
-#### Deletar Paciente
-- **DELETE** `/paciente/{id_paciente}`
-
-### 3. Leitos
-
-#### Criar Leito
-- **POST** `/leito/`
-- **Exemplo de JSON**:
-  ```json
-  {
-    "tipo": "UTI",
-    "ocupado": 0
-  }
-  ```
-
-#### Listar Leitos
-- **GET** `/leito/`
-
-#### Atualizar Leito
-- **PUT** `/leito/{id_leito}`
-  
-#### Deletar Leito
-- **DELETE** `/leito/{id_leito}`
-
-### 4. Profissionais
-
-#### Criar Profissional
-- **POST** `/profissional/`
-- **Exemplo de JSON**:
-  ```json
-  {
-    "nome": "Dra. Maria",
-    "setor": "Cardiologia",
-    "funcao": "Médico"
-  }
-  ```
-
-#### Listar Profissionais
-- **GET** `/profissional/`
-
-#### Atualizar Profissional
-- **PUT** `/profissional/{id_profissional}`
-  
-#### Deletar Profissional
-- **DELETE** `/profissional/{id_profissional}`
-
-### 5. Atendimentos
-
-#### Criar Atendimento
-- **POST** `/atendimento/`
-- **Exemplo de JSON**:
-  ```json
-  {
-    "data_hora": "2023-07-14T15:30:00",
-    "tipo": "Emergência",
-    "origem": "Ambulância",
-    "convenio": "Privado",
-    "id_paciente": 1,
-    "id_profissional": 2
-  }
-  ```
-
-#### Listar Atendimentos
-- **GET** `/atendimento/`
-
-#### Atualizar Atendimento
-- **PUT** `/atendimento/{id_atendimento}`
-  
-#### Deletar Atendimento
-- **DELETE** `/atendimento/{id_atendimento}`
-
-## Estrutura de Dados para Testes
-
-Aqui estão exemplos de dados em JSON que podem ser usados para teste da API.
-
-### Exemplo de Dados
-
-```json
-{
-  "unidades": [
-    { "nome": "Hospital Central", "localizacao": "Centro" }
-  ],
-
-  "pacientes": [
-      {
-    "nome": "João da Silva",
-    "data_nascimento": "1980-05-15",
-    "endereco": "Rua das Flores, 123",
-    "cep": "12345-678",
-    "nome_mae": "Maria da Silva",
-    "id_leito": 3
-      }
-  ],
-
-  "leitos": [
-    { "tipo": "UTI", "ocupado": 0 }
-  ],
-
-  "profissionais": [
-    { "nome": "Dra. Maria", "setor": "Cardiologia", "funcao": "Médico" }
-  ],
-  
-  "atendimentos": [
-    {
-      "data_hora": "2023-07-14T15:30:00",
-      "tipo": "Emergência",
-      "origem": "Ambulância",
-      "convenio": "Privado",
-      "id_paciente": 1,
-      "id_profissional": 1
-    }
-  ]
-}
-```
+### 📩 Compartilhar a coleção do Postman.
+### 🔑 Fornecer as credenciais necessárias, se aplicável.
+### 📋 Auxiliar na configuração manual, caso necessário.

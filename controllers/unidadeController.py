@@ -19,24 +19,17 @@ def get_db():
     finally:
         db.close()
 
-# Esquema Pydantic para ver todas as unidades
 class UnidadeResponse(BaseModel):
     id_unidade: int
     nome_unidade: str
+    descricao_unid: Optional[str] = None
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-# Esquema Pydantic para a criação de unidade
 class UnidadeCreate(BaseModel):
     nome_unidade: str
-
-# Esquema Pydantic para atualizar unidade
-class UnidadeUpdate(BaseModel):
-    nome_unidade: Optional[str] = None
-
-    class Config:
-        from_attributes = True
+    descricao_unid: Optional[str] = None
 
 @router.get("/", response_model=List[UnidadeResponse])
 def get_unidades(db: Session = Depends(get_db)):
@@ -45,7 +38,7 @@ def get_unidades(db: Session = Depends(get_db)):
 
 @router.post("/", response_model=UnidadeResponse)
 def create_unidade(unidade: UnidadeCreate, db: Session = Depends(get_db)):
-    db_unidade = Unidade(nome_unidade=unidade.nome_unidade)
+    db_unidade = Unidade(**unidade.dict())
     db.add(db_unidade)
     db.commit()
     db.refresh(db_unidade)
@@ -54,28 +47,15 @@ def create_unidade(unidade: UnidadeCreate, db: Session = Depends(get_db)):
 @router.get("/{id_unidade}", response_model=UnidadeResponse)
 def get_unidade_by_id(id_unidade: int, db: Session = Depends(get_db)):
     unidade = db.query(Unidade).filter(Unidade.id_unidade == id_unidade).first()
-    if unidade is None:
-        raise HTTPException(status_code=404, detail="Unidade não encontrada")
+    if not unidade:
+        raise HTTPException(status_code=404, detail="Unidade não encontrada.")
     return unidade
 
 @router.delete("/{id_unidade}")
 def delete_unidade(id_unidade: int, db: Session = Depends(get_db)):
     unidade = db.query(Unidade).filter(Unidade.id_unidade == id_unidade).first()
-    if unidade is None:
-        raise HTTPException(status_code=404, detail="Unidade não encontrada")
+    if not unidade:
+        raise HTTPException(status_code=404, detail="Unidade não encontrada.")
     db.delete(unidade)
     db.commit()
-    return {"message": "Unidade deletada com sucesso"}
-
-@router.put("/{id_unidade}", response_model=UnidadeResponse)
-def update_unidade(id_unidade: int, unidade_update: UnidadeUpdate, db: Session = Depends(get_db)):
-    unidade = db.query(Unidade).filter(Unidade.id_unidade == id_unidade).first()
-    if unidade is None:
-        raise HTTPException(status_code=404, detail="Unidade não encontrada")
-    
-    if unidade_update.nome_unidade:
-        unidade.nome_unidade = unidade_update.nome_unidade
-    
-    db.commit()
-    db.refresh(unidade)
-    return unidade
+    return {"message": "Unidade deletada com sucesso."}

@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
-from datetime import date
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from typing import List, Optional
 from models.models import Alta, Paciente
 from database import SessionLocal, engine, Base
 from pydantic import BaseModel
+from datetime import datetime
+
 
 router = APIRouter(prefix="/alta", tags=["Alta"])
 
@@ -19,69 +20,74 @@ def get_db():
     finally:
         db.close()
 
-# Esquema Pydantic para ver todas as altas
+# Esquema Pydantic para a resposta de Alta
 class AltaResponse(BaseModel):
     id_alta: int
-    data_alta: date
+    data_hora_alta: datetime
     motivo_alta: str
-    id_paciente: int
+    cpf: str  # CPF do paciente relacionado à alta
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
-# Esquema Pydantic para a criação de alta
+# Esquema Pydantic para criação de Alta
 class AltaCreate(BaseModel):
-    data_alta: date
+    data_hora_alta: datetime
     motivo_alta: str
-    id_paciente: int
+    cpf: str  # CPF do paciente relacionado à alta
 
-# Esquema Pydantic para atualizar alta
-class AltaUpdate(BaseModel):
-    data_alta: Optional[date] = None
-    motivo_alta: Optional[str] = None
-    id_paciente: Optional[int] = None
-
-    class Config:
-        from_attributes = True
-
+# Rota para obter todas as altas
 @router.get("/", response_model=List[AltaResponse])
 def get_altas(db: Session = Depends(get_db)):
+    """Retorna todas as altas cadastradas."""
     altas = db.query(Alta).all()
     return altas
 
+# Rota para obter todas as altas de um paciente pelo CPF
+@router.get("/paciente/{cpf}", response_model=List[AltaResponse])
+def get_altas_by_cpf(cpf: str, db: Session = Depends(get_db)):
+    """Retorna todas as altas relacionadas a um paciente pelo CPF."""
+    paciente = db.query(Paciente).filter(Paciente.cpf == cpf).first()
+    if not paciente:
+        raise HTTPException(status_code=404, detail="Paciente não encontrado.")
+
+    altas = db.query(Alta).filter(Alta.cpf == cpf).all()
+    if not altas:
+        raise HTTPException(status_code=404, detail="Nenhuma alta encontrada para este paciente.")
+    return altas
+
+# Rota para criar uma nova alta
 @router.post("/", response_model=AltaResponse)
 def create_alta(alta: AltaCreate, db: Session = Depends(get_db)):
+    """Cria uma nova alta."""
+    # Verifica se o paciente existe
+    paciente = db.query(Paciente).filter(Paciente.cpf == alta.cpf).first()
+    if not paciente:
+        raise HTTPException(status_code=404, detail="Paciente não encontrado.")
+    
+    # Cria a alta
     db_alta = Alta(**alta.dict())
     db.add(db_alta)
     db.commit()
     db.refresh(db_alta)
     return db_alta
 
+# Rota para obter uma alta pelo ID
 @router.get("/{id_alta}", response_model=AltaResponse)
 def get_alta_by_id(id_alta: int, db: Session = Depends(get_db)):
+    """Retorna uma alta pelo ID."""
     alta = db.query(Alta).filter(Alta.id_alta == id_alta).first()
-    if alta is None:
-        raise HTTPException(status_code=404, detail="Alta não encontrada")
+    if not alta:
+        raise HTTPException(status_code=404, detail="Alta não encontrada.")
     return alta
 
+# Rota para deletar uma alta pelo ID
 @router.delete("/{id_alta}")
 def delete_alta(id_alta: int, db: Session = Depends(get_db)):
+    """Deleta uma alta pelo ID."""
     alta = db.query(Alta).filter(Alta.id_alta == id_alta).first()
-    if alta is None:
-        raise HTTPException(status_code=404, detail="Alta não encontrada")
+    if not alta:
+        raise HTTPException(status_code=404, detail="Alta não encontrada.")
     db.delete(alta)
     db.commit()
-    return {"message": "Alta deletada com sucesso"}
-
-@router.put("/{id_alta}", response_model=AltaResponse)
-def update_alta(id_alta: int, alta_update: AltaUpdate, db: Session = Depends(get_db)):
-    alta = db.query(Alta).filter(Alta.id_alta == id_alta).first()
-    if alta is None:
-        raise HTTPException(status_code=404, detail="Alta não encontrada")
-    
-    for field, value in alta_update.dict(exclude_unset=True).items():
-        setattr(alta, field, value)
-    
-    db.commit()
-    db.refresh(alta)
-    return alta
+    return {"message": "Alta deletada com sucesso."}
