@@ -32,8 +32,7 @@ class Leito(Base):
 # Modelo para a tabela Paciente
 class Paciente(Base):
     __tablename__ = 'paciente'
-    id_paciente = Column (Integer, primary_key=True, autoincrement=True)
-    cpf = Column(String(11), nullable=False)
+    cpf = Column(String(11), primary_key=True)
     nome = Column(String(255), nullable=False)
     data_nascimento = Column(Date)
     endereco = Column(String(255))
@@ -51,9 +50,8 @@ class Paciente(Base):
 class Profissional(Base):
     __tablename__ = 'profissional'
     
-    id_profissional = Column(Integer, primary_key=True, autoincrement=True)
+    cpf = Column(String(11), primary_key=True)
     nome = Column(String(255))
-    cpf = Column(String(11))
     setor = Column(String(255))
     funcao = Column(String(255))
     
@@ -70,7 +68,7 @@ class Atendimento(Base):
     origem = Column(String(100))
     convenio = Column(String(100))
     cpf = Column(String(11), ForeignKey('paciente.cpf'))
-    id_profissional = Column(Integer, ForeignKey('profissional.id_profissional'))
+    cpf_profissional = Column(String(11), ForeignKey('profissional.cpf'))
     
     # Relacionamento com as tabelas Paciente e Profissional
     paciente = relationship("Paciente", back_populates="atendimentos")
@@ -91,7 +89,7 @@ class Transferencia(Base):
     leito_origem = relationship("Leito", foreign_keys=[codigo_leito_origem], back_populates="transferencias_origem")
     leito_destino = relationship("Leito", foreign_keys=[codigo_leito_destino], back_populates="transferencias_destino")
 
-# Modelo Pydantic para a tabela Alta
+# Modelo para a tabela Alta
 class Alta(Base):
     __tablename__ = 'Alta'
     
