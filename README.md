@@ -65,6 +65,12 @@ IS_ABSOLUTE_STAGING_AREA_PATH=<se o caminho é absoluto ou relativo>
 
 O Cliente poderá configurar uma expressão cron para que o próprio backend faça uma operação em lote para persistir os dados locais no banco de dados. Para isso será necessário ir ao arquivo `.env` e preencher na variável `CRONTAB` a expressão que agenda a frequência em que os dados locais serão persistidos no banco de dados.
 
+Para ativar a função cron job é  necessário ir para o arquivo `main.py` e fazer a seguintes alterações:
+```python
+app = FastAPI(lifespan=lifespan_scheduler) # ativar o cron job
+# app = FastAPI()
+```
+
 # 🌐 Endpoint disponível no Postman
 
 ## Você pode acessar todos os endpoints da API diretamente no Postman para facilitar os testes e a integração. 🚀
