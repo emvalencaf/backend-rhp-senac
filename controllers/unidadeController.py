@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
-from datetime import date
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from typing import List, Optional
-from models.models import Unidade, Paciente, Leito, Transferencia, Alta, Atendimento, Profissional
+from local_stage import save_local_stage
+from models.models import Unidade
 from database import SessionLocal, engine, Base
 from pydantic import BaseModel
+from sqlalchemy.exc import OperationalError, DatabaseError
 
 router = APIRouter(prefix="/unidade", tags=["Unidade"])
 
@@ -38,12 +39,31 @@ def get_unidades(db: Session = Depends(get_db)):
 
 @router.post("/", response_model=UnidadeResponse)
 def create_unidade(unidade: UnidadeCreate, db: Session = Depends(get_db)):
-    db_unidade = Unidade(**unidade.dict())
-    db.add(db_unidade)
-    db.commit()
-    db.refresh(db_unidade)
-    return db_unidade
+    try:
+        db_unidade = Unidade(**unidade.model_dump())
+        db.add(db_unidade)
+        db.commit()
+        db.refresh(db_unidade)
+        return db_unidade
+    except OperationalError as err:
+        print("Erro de conexão com o banco de dados:", err)
+        
+        save_local_stage(partition_key="unidade",
+                         action="create",
+                         data=unidade.model_dump())
+        raise HTTPException(status_code=503, detail="Erro de conexão com o banco de dados")
+    except DatabaseError as err:
+        print("Erro no servidor do banco de dados:", err)
+        
+        save_local_stage(partition_key="unidade",
+                         action="create",
+                         data=unidade.model_dump())
 
+        raise HTTPException(status_code=500, detail="Erro no servidor do banco de dados")
+    except Exception as err:
+        print("Erro inesperado:", err)
+        raise err
+    
 @router.get("/{id_unidade}", response_model=UnidadeResponse)
 def get_unidade_by_id(id_unidade: int, db: Session = Depends(get_db)):
     unidade = db.query(Unidade).filter(Unidade.id_unidade == id_unidade).first()

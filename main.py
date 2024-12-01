@@ -3,6 +3,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from datetime import date
 from sqlalchemy.orm import Session, joinedload
 from typing import List
+from cron import lifespan_scheduler
 from local_stage import save_local_stage
 from models.models import Unidade, Paciente, Leito, Transferencia, Alta, Atendimento, Profissional # Importa os models
 from database import SessionLocal, engine, Base  # Importa a sessão e a engine do database.py
@@ -20,6 +21,7 @@ from controllers.transferenciaController import router as transferencia_router
 from controllers.unidadeController import router as unidade_router
 
 # Cria o aplicativo FastAPI
+# app = FastAPI(lifespan=lifespan_scheduler) ativar o cron job
 app = FastAPI()
 
 #====== Rota Publica apenas para testar no Postman se esta tudo funcionando======

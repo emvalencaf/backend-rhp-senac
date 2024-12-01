@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from local_stage import save_local_stage
 from models.models import Profissional
 from database import SessionLocal, engine, Base
 from pydantic import BaseModel, EmailStr
+from sqlalchemy.exc import OperationalError, DatabaseError
 
 router = APIRouter(prefix="/profissional", tags=["Profissional"])
 
@@ -55,15 +57,33 @@ def get_profissionais(db: Session = Depends(get_db)):
 @router.post("/", response_model=ProfissionalResponse, status_code=status.HTTP_201_CREATED)
 def create_profissional(profissional: ProfissionalCreate, db: Session = Depends(get_db)):
     """Cria um novo profissional."""
-    if db.query(Profissional).filter(Profissional.cpf == profissional.cpf).first():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="CPF já cadastrado."
-        )
-    db_profissional = Profissional(**profissional.dict())
-    db.add(db_profissional)
-    db.commit()
-    db.refresh(db_profissional)
-    return db_profissional
+    try:
+        if db.query(Profissional).filter(Profissional.cpf == profissional.cpf).first():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="CPF já cadastrado."
+            )
+        db_profissional = Profissional(**profissional.model_dump())
+        db.add(db_profissional)
+        db.commit()
+        db.refresh(db_profissional)
+        return db_profissional
+    except OperationalError as err:
+        print("Erro de conexão com o banco de dados:", err)
+        
+        save_local_stage(partition_key="profissional",
+                         action="update",
+                         data=profissional.model_dump())
+        raise HTTPException(status_code=503, detail="Erro de conexão com o banco de dados")
+    except DatabaseError as err:
+        print("Erro no servidor do banco de dados:", err)
+        
+        save_local_stage(partition_key="profissional",
+                         action="update",
+                         data=profissional.model_dump())
+        raise HTTPException(status_code=500, detail="Erro no servidor do banco de dados")
+    except Exception as err:
+        print("Erro inesperado:", err)
+        raise err
 
 @router.get("/{cpf}", response_model=ProfissionalResponse)
 def get_profissional_by_cpf(cpf: str, db: Session = Depends(get_db)):
@@ -80,17 +100,35 @@ def update_profissional(
     cpf: str, profissional_update: ProfissionalUpdate, db: Session = Depends(get_db)
 ):
     """Atualiza um profissional pelo CPF."""
-    profissional = db.query(Profissional).filter(Profissional.cpf == cpf).first()
-    if not profissional:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Profissional não encontrado."
-        )
-    for field, value in profissional_update.dict(exclude_unset=True).items():
-        setattr(profissional, field, value)
-    db.commit()
-    db.refresh(profissional)
-    return profissional
-
+    try:
+        profissional = db.query(Profissional).filter(Profissional.cpf == cpf).first()
+        if not profissional:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Profissional não encontrado."
+            )
+        for field, value in profissional_update.model_dump(exclude_unset=True).items():
+            setattr(profissional, field, value)
+        db.commit()
+        db.refresh(profissional)
+        return profissional
+    except OperationalError as err:
+        print("Erro de conexão com o banco de dados:", err)
+        
+        save_local_stage(partition_key="profissional",
+                         action="update",
+                         data=profissional_update.model_dump())
+        raise HTTPException(status_code=503, detail="Erro de conexão com o banco de dados")
+    except DatabaseError as err:
+        print("Erro no servidor do banco de dados:", err)
+        
+        save_local_stage(partition_key="profissional",
+                         action="update",
+                         data=profissional_update.model_dump())
+        raise HTTPException(status_code=500, detail="Erro no servidor do banco de dados")
+    except Exception as err:
+        print("Erro inesperado:", err)
+        raise err
+    
 @router.delete("/{cpf}", status_code=status.HTTP_200_OK)
 def delete_profissional(cpf: str, db: Session = Depends(get_db)):
     """Deleta um profissional pelo CPF e retorna o nome do profissional deletado."""

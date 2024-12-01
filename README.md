@@ -61,6 +61,10 @@ STAGING_AREA_PATH=<caminho do repositório de dados local>
 IS_ABSOLUTE_STAGING_AREA_PATH=<se o caminho é absoluto ou relativo>
 ```
 
+## CRON JOB
+
+O Cliente poderá configurar uma expressão cron para que o próprio backend faça uma operação em lote para persistir os dados locais no banco de dados. Para isso será necessário ir ao arquivo `.env` e preencher na variável `CRONTAB` a expressão que agenda a frequência em que os dados locais serão persistidos no banco de dados.
+
 # 🌐 Endpoint disponível no Postman
 
 ## Você pode acessar todos os endpoints da API diretamente no Postman para facilitar os testes e a integração. 🚀

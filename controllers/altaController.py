@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List
+from local_stage import save_local_stage
 from models.models import Alta, Paciente
 from database import SessionLocal, engine, Base
 from pydantic import BaseModel
 from datetime import datetime
+from sqlalchemy.exc import OperationalError, DatabaseError
 
 
 router = APIRouter(prefix="/alta", tags=["Alta"])
@@ -61,16 +63,34 @@ def get_altas_by_cpf(cpf: str, db: Session = Depends(get_db)):
 def create_alta(alta: AltaCreate, db: Session = Depends(get_db)):
     """Cria uma nova alta."""
     # Verifica se o paciente existe
-    paciente = db.query(Paciente).filter(Paciente.cpf == alta.cpf).first()
-    if not paciente:
-        raise HTTPException(status_code=404, detail="Paciente não encontrado.")
+    try:
+        paciente = db.query(Paciente).filter(Paciente.cpf == alta.cpf).first()
+        if not paciente:
+            raise HTTPException(status_code=404, detail="Paciente não encontrado.")
     
-    # Cria a alta
-    db_alta = Alta(**alta.dict())
-    db.add(db_alta)
-    db.commit()
-    db.refresh(db_alta)
-    return db_alta
+        # Cria a alta
+        db_alta = Alta(**alta.model_dump())
+        db.add(db_alta)
+        db.commit()
+        db.refresh(db_alta)
+        return db_alta
+    except OperationalError as err:
+        print("Erro de conexão com o banco de dados:", err)
+        
+        save_local_stage(partition_key="alta",
+                         action="create",
+                         data=alta.model_dump())
+        raise HTTPException(status_code=503, detail="Erro de conexão com o banco de dados")
+    except DatabaseError as err:
+        print("Erro no servidor do banco de dados:", err)
+        
+        save_local_stage(partition_key="alta",
+                         action="create",
+                         data=alta.model_dump())
+        raise HTTPException(status_code=500, detail="Erro no servidor do banco de dados")
+    except Exception as err:
+        print("Erro inesperado:", err)
+        raise err
 
 # Rota para obter uma alta pelo ID
 @router.get("/{id_alta}", response_model=AltaResponse)

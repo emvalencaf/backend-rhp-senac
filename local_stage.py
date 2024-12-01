@@ -3,6 +3,8 @@ from datetime import datetime
 from os import getenv, makedirs
 from pathlib import Path
 from dotenv import load_dotenv
+import shutil
+
 
 load_dotenv()
 
@@ -40,8 +42,27 @@ def save_local_stage(partition_key: str,
     
     # Salva os dados como JSON com tratamento de erro
     try:
-        with open(full_path, "w") as f:
+        with open(full_path, "w", encoding='ISO-8859-1') as f:
             json.dump(data, f, default=str)
         print(f"Dados salvos com sucesso em {full_path}")
     except IOError as e:
         print(f"Ocorreu um erro ao salvar o arquivo: {e}")
+
+def clean_local_stage(partition_key: str, action: str):
+    if action.lower() not in ACTIONS:
+        raise Exception("A ação deve estar listada nas ações")
+    
+    # Define o diretório base para o staging, convertendo para absoluto se necessário
+    base_dir = Path(STAGING_AREA_PATH) if IS_ABSOLUTE_STAGING_AREA_PATH else Path.cwd() / STAGING_AREA_PATH
+    
+    dir_name = base_dir / action / partition_key
+    
+    # Verifica se o diretório existe antes de tentar removê-lo
+    if dir_name.exists() and dir_name.is_dir():
+        try:
+            shutil.rmtree(dir_name)  # Remove o diretório e todo o seu conteúdo
+            print(f"Diretório {dir_name} removido com sucesso.")
+        except Exception as e:
+            print(f"Ocorreu um erro ao tentar remover o diretório: {e}")
+    else:
+        print(f"O diretório {dir_name} não existe.")

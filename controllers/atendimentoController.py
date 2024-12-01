@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from local_stage import save_local_stage
 from models.models import Atendimento, Paciente, Profissional
 from database import SessionLocal, engine, Base
 from pydantic import BaseModel
 from datetime import datetime
+from sqlalchemy.exc import OperationalError, DatabaseError
+
 
 router = APIRouter(prefix="/atendimento", tags=["Atendimento"])
 
@@ -46,19 +49,37 @@ def get_atendimentos(db: Session = Depends(get_db)):
 
 @router.post("/", response_model=AtendimentoResponse)
 def create_atendimento(atendimento: AtendimentoCreate, db: Session = Depends(get_db)):
-    paciente = db.query(Paciente).filter(Paciente.cpf == atendimento.cpf).first()
-    profissional = db.query(Profissional).filter(Profissional.cpf == atendimento.cpf_profissional).first()
+    try:
+        paciente = db.query(Paciente).filter(Paciente.cpf == atendimento.cpf).first()
+        profissional = db.query(Profissional).filter(Profissional.cpf == atendimento.cpf_profissional).first()
 
-    if not paciente:
-        raise HTTPException(status_code=404, detail="Paciente não encontrado.")
-    if not profissional:
-        raise HTTPException(status_code=404, detail="Profissional não encontrado.")
+        if not paciente:
+            raise HTTPException(status_code=404, detail="Paciente não encontrado.")
+        if not profissional:
+            raise HTTPException(status_code=404, detail="Profissional não encontrado.")
 
-    db_atendimento = Atendimento(**atendimento.dict())
-    db.add(db_atendimento)
-    db.commit()
-    db.refresh(db_atendimento)
-    return db_atendimento
+        db_atendimento = Atendimento(**atendimento.model_dump())
+        db.add(db_atendimento)
+        db.commit()
+        db.refresh(db_atendimento)
+        return db_atendimento
+    except OperationalError as err:
+        print("Erro de conexão com o banco de dados:", err)
+        
+        save_local_stage(partition_key="atendimento",
+                         action="create",
+                         data=atendimento.model_dump())
+        raise HTTPException(status_code=503, detail="Erro de conexão com o banco de dados")
+    except DatabaseError as err:
+        print("Erro no servidor do banco de dados:", err)
+        
+        save_local_stage(partition_key="atendimento",
+                         action="create",
+                         data=atendimento.model_dump())
+        raise HTTPException(status_code=500, detail="Erro no servidor do banco de dados")
+    except Exception as err:
+        print("Erro inesperado:", err)
+        raise err
 
 @router.get("/{id_atendimento}", response_model=AtendimentoResponse)
 def get_atendimento_by_id(id_atendimento: int, db: Session = Depends(get_db)):
