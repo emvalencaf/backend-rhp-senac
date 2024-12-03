@@ -74,6 +74,59 @@ def create_transferencia(transferencia: TransferenciaCreate, db: Session = Depen
         if not leito_destino:
             raise HTTPException(status_code=404, detail="Leito de destino não encontrado.")
         
+        # Verifica se já existe uma transferência com os mesmos dados
+        transferencia_existente = db.query(Transferencia).filter(
+            Transferencia.cpf == transferencia.cpf,
+            Transferencia.codigo_leito_origem == transferencia.codigo_leito_origem,
+            Transferencia.codigo_leito_destino == transferencia.codigo_leito_destino,
+            Transferencia.datahora_transferencia == transferencia.datahora_transferencia
+        ).first()
+
+        if transferencia_existente:
+            raise HTTPException(status_code=400, detail="A mesma transferência já foi registrada anteriormente.")
+
+        # Cria a transferência
+        db_transferencia = Transferencia(**transferencia.model_dump())
+        db.add(db_transferencia)
+        db.commit()
+        db.refresh(db_transferencia)
+        return db_transferencia
+    except OperationalError as err:
+        print("Erro de conexão com o banco de dados:", err)
+        
+        save_local_stage(partition_key="transferencia",
+                         action="create",
+                         data=transferencia.model_dump())
+        
+        raise HTTPException(status_code=503, detail="Erro de conexão com o banco de dados")
+    except DatabaseError as err:
+        print("Erro no servidor do banco de dados:", err)
+        
+        save_local_stage(partition_key="transferencia",
+                         action="create",
+                         data=transferencia.model_dump())
+        
+        raise HTTPException(status_code=500, detail="Erro no servidor do banco de dados")
+    except Exception as err:
+        print("Erro inesperado:", err)
+        raise err
+    try:
+        """Cria uma nova transferência."""
+        # Verifica se o paciente existe
+        paciente = db.query(Paciente).filter(Paciente.cpf == transferencia.cpf).first()
+        if not paciente:
+            raise HTTPException(status_code=404, detail="Paciente não encontrado.")
+        
+        # Verifica se o leito de origem existe
+        leito_origem = db.query(Leito).filter(Leito.id_leito == transferencia.codigo_leito_origem).first()
+        if not leito_origem:
+            raise HTTPException(status_code=404, detail="Leito de origem não encontrado.")
+
+        # Verifica se o leito de destino existe
+        leito_destino = db.query(Leito).filter(Leito.id_leito == transferencia.codigo_leito_destino).first()
+        if not leito_destino:
+            raise HTTPException(status_code=404, detail="Leito de destino não encontrado.")
+        
         # Cria a transferência
         db_transferencia = Transferencia(**transferencia.model_dump())
         db.add(db_transferencia)
