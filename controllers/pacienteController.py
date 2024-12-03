@@ -7,6 +7,7 @@ from database import SessionLocal, engine, Base
 from pydantic import BaseModel
 from datetime import date
 from sqlalchemy.exc import OperationalError, DatabaseError
+import validate_docbr  # Importando a biblioteca de validação de CPF
 
 router = APIRouter(prefix="/paciente", tags=["Paciente"])
 
@@ -53,6 +54,11 @@ class PacienteUpdate(BaseModel):
     class Config:
         orm_mode = True
 
+# Função para validar CPF
+def validar_cpf(cpf: str) -> bool:
+    cpf_validator = validate_docbr.CPF()
+    return cpf_validator.validate(cpf)
+
 @router.get("/", response_model=List[PacienteResponse])
 def get_pacientes(db: Session = Depends(get_db)):
     """Retorna todos os pacientes cadastrados."""
@@ -63,6 +69,10 @@ def get_pacientes(db: Session = Depends(get_db)):
 def create_paciente(paciente: PacienteCreate, db: Session = Depends(get_db)):
     """Cria um novo paciente."""
     try:
+        # Verifica se o CPF é válido
+        if not validar_cpf(paciente.cpf):
+            raise HTTPException(status_code=400, detail="CPF inválido.")
+        
         # Verifica se o CPF já está cadastrado
         if db.query(Paciente).filter(Paciente.cpf == paciente.cpf).first():
             raise HTTPException(status_code=400, detail="CPF já cadastrado.")
